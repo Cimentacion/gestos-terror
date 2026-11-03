@@ -116,13 +116,19 @@ const mano3d = new Mano3D(camera);
 let ultimaMano = null, aspectoVideo = 3 / 4;
 
 // ================================================================ UTILIDADES
+// Todo lo que se construye con caja() o plano() es sólido para la mano (menos las zonas invisibles)
+const solidos = [];
 function caja(w, h, d, material, x, y, z, padre = scene) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  m.position.set(x, y, z); padre.add(m); return m;
+  m.position.set(x, y, z); padre.add(m);
+  if (material !== matHit) solidos.push(m);
+  return m;
 }
 function plano(w, h, material, x, y, z, ry = 0, rx = 0, padre = scene) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
-  m.position.set(x, y, z); m.rotation.set(rx, ry, 0); padre.add(m); return m;
+  m.position.set(x, y, z); m.rotation.set(rx, ry, 0); padre.add(m);
+  solidos.push(m);
+  return m;
 }
 const matHit = new THREE.MeshBasicMaterial({ visible: false });
 const zona = (w, h, d, x, y, z) => caja(w, h, d, matHit, x, y, z);
@@ -497,6 +503,8 @@ function quaternionDispositivo(o, q) {
   q.multiply(qTmp.setFromAxisAngle(EJE_Z, -orient));
   return q;
 }
+const qObjetivoCam = new THREE.Quaternion();
+let camaraIniciada = false, dtFrame = 1 / 60;
 function orientarCamara() {
   if (orientacion) {
     quaternionDispositivo(orientacion, qDisp);
@@ -507,7 +515,10 @@ function orientarCamara() {
       calibrado = true;
     }
     qYaw.setFromAxisAngle(EJE_Y, yawExtra);
-    camera.quaternion.copy(qYaw).multiply(qDisp);
+    qObjetivoCam.copy(qYaw).multiply(qDisp);
+    // suavizado ligero: quita el temblor del sensor sin notarse retraso
+    if (!camaraIniciada) { camera.quaternion.copy(qObjetivoCam); camaraIniciada = true; }
+    else camera.quaternion.slerp(qObjetivoCam, 1 - Math.pow(0.45, dtFrame * 60));
   } else {
     camera.rotation.set(pitchManual, yawManual, 0, 'YXZ');
   }
@@ -526,14 +537,30 @@ const soltar = e => { if (arrastre && e.pointerId === arrastre.id) arrastre = nu
 addEventListener('pointerup', soltar);
 addEventListener('pointercancel', soltar);
 
-// --- Andar: mantener pulsado el botón de la izquierda
-let andando = false, teclaAndar = false;
-const btnAndar = $('btnAndar');
-btnAndar.addEventListener('pointerdown', e => { e.stopPropagation(); andando = true; btnAndar.classList.add('pulsado'); btnAndar.setPointerCapture(e.pointerId); iniciarAudio(); });
-const pararAndar = () => { andando = false; btnAndar.classList.remove('pulsado'); };
-btnAndar.addEventListener('pointerup', pararAndar);
-btnAndar.addEventListener('pointercancel', pararAndar);
-btnAndar.addEventListener('lostpointercapture', pararAndar);
+// --- Andar: joystick analógico abajo a la izquierda
+// Arriba = avanzar, abajo = retroceder, lados = moverse de lado. Cuanto más lo empujas, más rápido.
+const joy = { x: 0, y: 0, id: null };
+let teclaAndar = false;
+const joyBase = $('joyBase'), joyBola = $('joyBola');
+const RADIO_JOY = 46;
+function moverJoy(e) {
+  const r = joyBase.getBoundingClientRect();
+  let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const d = Math.hypot(dx, dy);
+  if (d > RADIO_JOY) { dx *= RADIO_JOY / d; dy *= RADIO_JOY / d; }
+  joyBola.style.transform = `translate(${dx}px, ${dy}px)`;
+  joy.x = dx / RADIO_JOY; joy.y = dy / RADIO_JOY;
+}
+joyBase.addEventListener('pointerdown', e => {
+  e.stopPropagation(); iniciarAudio();
+  joy.id = e.pointerId; joyBase.setPointerCapture(e.pointerId);
+  joyBase.classList.add('pulsado'); moverJoy(e);
+});
+joyBase.addEventListener('pointermove', e => { if (e.pointerId === joy.id) moverJoy(e); });
+const pararAndar = () => { joy.id = null; joy.x = joy.y = 0; joyBola.style.transform = ''; joyBase.classList.remove('pulsado'); };
+joyBase.addEventListener('pointerup', pararAndar);
+joyBase.addEventListener('pointercancel', pararAndar);
+joyBase.addEventListener('lostpointercapture', pararAndar);
 
 // ================================================================ APUNTAR CON LA MANO
 const ray = new THREE.Raycaster();
@@ -556,6 +583,40 @@ function actualizarObjetivo(t) {
   let txt = '';
   if (objetivo) txt = objetivo.hecho && !objetivo.repetible ? `${objetivo.nombre} ✓` : objetivo.nombre;
   if ($('objetivoTxt').textContent !== txt) $('objetivoTxt').textContent = txt;
+}
+
+// ================================================================ TACTO
+const rayMano = new THREE.Raycaster();
+rayMano.far = 1.3;
+// No cuenta lo invisible (cristal roto, figura que no está) ni lo que llevas en la mano
+function esSolidoActivo(o) {
+  for (let p = o; p; p = p.parent) {
+    if (!p.visible) return false;
+    if (p === camera) return false;
+  }
+  return true;
+}
+let tocandoAntes = false, tRoce = 0;
+const palmaPantallaAntes = new THREE.Vector2(), palmaPantalla = new THREE.Vector2();
+function sensacionTacto(t, dt) {
+  const toca = mano3d.visible && mano3d.tocando;
+  vTmp.copy(mano3d.palmaLocal).applyMatrix4(camera.matrixWorld).project(camera);
+  palmaPantalla.set(vTmp.x, vTmp.y);
+  if (toca && !tocandoAntes) {
+    // contacto: golpecito
+    vibrar(22);
+    ruido(0.05, 0.35, 900, 'lowpass');
+  } else if (toca) {
+    // roce si arrastras la mano por la superficie
+    const vel = palmaPantalla.distanceTo(palmaPantallaAntes) / Math.max(dt, 1e-3);
+    if (vel > 0.6 && t - tRoce > 110) {
+      tRoce = t;
+      vibrar(8);
+      ruido(0.07, Math.min(0.25, vel * 0.08), 1800, 'bandpass');
+    }
+  }
+  tocandoAntes = toca;
+  palmaPantallaAntes.copy(palmaPantalla);
 }
 
 // ================================================================ MENSAJES Y GESTOS
@@ -727,7 +788,7 @@ function escapar() {
 
 // ================================================================ BUCLE PRINCIPAL
 let tPrev = performance.now(), ultimoFrameVideo = -1;
-const adelante = new THREE.Vector3();
+const adelante = new THREE.Vector3(), lado = new THREE.Vector3(), vel = new THREE.Vector3(), velObjetivo = new THREE.Vector3();
 function bucle() {
   requestAnimationFrame(bucle);
   const t = performance.now();
@@ -735,25 +796,36 @@ function bucle() {
   tPrev = t;
 
   // --- Mirar y andar
+  dtFrame = dt;
   orientarCamara();
-  if (jugando && (andando || teclaAndar)) {
-    camera.getWorldDirection(adelante);
-    adelante.y = 0;
-    if (adelante.lengthSq() > 1e-4) {
-      adelante.normalize();
-      const v = 1.3 * dt;
-      const nx = jugador.x + adelante.x * v, nz = jugador.z + adelante.z * v;
-      if (libre(nx, nz)) { jugador.x = nx; jugador.z = nz; }
-      else if (libre(nx, jugador.z)) jugador.x = nx;
-      else if (libre(jugador.x, nz)) jugador.z = nz;
-      jugador.bob += dt * 9;
-      jugador.distPaso += v;
-      if (jugador.distPaso > 0.6) { jugador.distPaso = 0; sonido.paso(); }
-    }
+  camera.getWorldDirection(adelante);
+  adelante.y = 0;
+  if (adelante.lengthSq() > 1e-4) adelante.normalize(); else adelante.set(0, 0, -1);
+  lado.set(-adelante.z, 0, adelante.x);
+  // entrada del joystick con zona muerta
+  let ax = joy.x, ay = -joy.y;
+  if (teclaAndar) ay = 1;
+  const mag = Math.hypot(ax, ay);
+  if (mag < 0.15 || !jugando) { ax = 0; ay = 0; }
+  else { const k = Math.min(1, (mag - 0.15) / 0.85) / mag; ax *= k; ay *= k; }
+  const VEL_MAX = 1.6;
+  velObjetivo.set(0, 0, 0).addScaledVector(adelante, ay * VEL_MAX).addScaledVector(lado, ax * VEL_MAX * 0.8);
+  // inercia: acelera y frena suave
+  vel.lerp(velObjetivo, 1 - Math.pow(0.001, dt * (velObjetivo.lengthSq() > 0.01 ? 1.2 : 2.0)));
+  const rapidez = vel.length();
+  if (rapidez > 0.02) {
+    const nx = jugador.x + vel.x * dt, nz = jugador.z + vel.z * dt;
+    if (libre(nx, nz)) { jugador.x = nx; jugador.z = nz; }
+    else if (libre(nx, jugador.z)) { jugador.x = nx; vel.z = 0; }
+    else if (libre(jugador.x, nz)) { jugador.z = nz; vel.x = 0; }
+    else vel.set(0, 0, 0);
+    jugador.bob += dt * (5 + rapidez * 3.5);
+    jugador.distPaso += rapidez * dt;
+    if (jugador.distPaso > 0.65) { jugador.distPaso = 0; sonido.paso(); }
   } else {
     jugador.bob += (Math.round(jugador.bob / Math.PI) * Math.PI - jugador.bob) * 0.1;
   }
-  camera.position.set(jugador.x, jugador.altura + Math.abs(Math.sin(jugador.bob)) * 0.035 - 0.015, jugador.z);
+  camera.position.set(jugador.x, jugador.altura + Math.abs(Math.sin(jugador.bob)) * 0.03 * Math.min(1, vel.length() / 1.2 + 0.2) - 0.015, jugador.z);
   camera.updateMatrixWorld();
 
   // --- Detección de la mano
@@ -771,7 +843,17 @@ function bucle() {
     dibujarMano(lm, r.pose, r.debug);
     if (r.gesto) alGesto(r.gesto);
   }
-  mano3d.actualizar(jugando ? ultimaMano : null, aspectoVideo, dt);
+  // Rayo desde la cámara hacia la mano: si hay algo delante, la mano se apoya en esa superficie
+  let limite = Infinity;
+  if (mano3d.hayDatos) {
+    camera.getWorldPosition(rayMano.ray.origin);
+    rayMano.ray.direction.copy(mano3d.palmaLocal).normalize().transformDirection(camera.matrixWorld);
+    for (const h of rayMano.intersectObjects(solidos, false)) {
+      if (esSolidoActivo(h.object)) { limite = h.distance; break; }
+    }
+  }
+  mano3d.actualizar(jugando ? ultimaMano : null, aspectoVideo, dt, limite);
+  sensacionTacto(t, dt);
 
   // --- Lo que llevas en la mano
   const kMano = 1 - Math.pow(0.6, dt * 60);
@@ -832,4 +914,6 @@ function bucle() {
   actualizarObjetivo(t);
   renderer.render(scene, camera);
 }
+// Gancho para pruebas sin cámara
+window.__debug = { setMano: (lm, a = 3 / 4) => { ultimaMano = lm; aspectoVideo = a; }, mano3d, jugador, estado };
 bucle();

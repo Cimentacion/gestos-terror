@@ -27,11 +27,11 @@
   .btn { background:var(--panel); color:var(--txt); border:1px solid #444; border-radius:8px; padding:8px 10px; font-size:13px; }
   .btn:active { background:#333; }
 
-  #btnAndar { position:fixed; left:calc(18px + env(safe-area-inset-left)); bottom:calc(90px + env(safe-area-inset-bottom)); width:92px; height:92px; border-radius:50%; background:rgba(20,20,24,.55); border:2px solid rgba(255,255,255,.25); color:#ddd; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; touch-action:none; }
-  #btnAndar.pulsado { background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.6); }
-  #btnAndar svg { width:34px; height:34px; }
-
-  #abajo { position:fixed; left:0; right:0; bottom:calc(20px + env(safe-area-inset-bottom)); text-align:center; pointer-events:none; padding:0 12px 0 120px; }
+  #joyBase { position:fixed; left:calc(20px + env(safe-area-inset-left)); bottom:calc(80px + env(safe-area-inset-bottom)); width:128px; height:128px; border-radius:50%; background:rgba(20,20,24,.45); border:2px solid rgba(255,255,255,.2); touch-action:none; }
+  #joyBase.pulsado { border-color:rgba(255,255,255,.45); background:rgba(30,30,36,.55); }
+  #joyBola { position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:rgba(230,225,215,.35); border:2px solid rgba(255,255,255,.5); pointer-events:none; }
+  #joyBase.pulsado #joyBola { background:rgba(230,225,215,.55); }
+  #abajo { position:fixed; left:0; right:0; bottom:calc(20px + env(safe-area-inset-bottom)); text-align:center; pointer-events:none; padding:0 12px 0 156px; }
   #objetivoTxt { display:inline-block; background:var(--panel); padding:6px 12px; border-radius:6px; font-size:14px; }
   #objetivoTxt:empty { display:none; }
   #mensajeTxt { margin-top:8px; font-size:16px; font-weight:700; text-shadow:0 2px 4px #000; min-height:22px; transition:opacity .4s; }
@@ -70,7 +70,7 @@
   <button class="btn" id="btnReset">Reiniciar</button>
 </div>
 
-<div id="btnAndar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l7 9h-4v9H9v-9H5z"/></svg></div>
+<div id="joyBase"><div id="joyBola"></div></div>
 
 <div id="abajo">
   <div id="objetivoTxt"></div>
@@ -82,7 +82,7 @@
 <div class="pantalla" id="pantallaInicio">
   <h1>LA HABITACIÓN</h1>
   <p>Estás encerrado. Sal de aquí.</p>
-  <p>Sujeta el móvil con una mano: mueve el móvil para mirar y <b>mantén pulsado el botón de la izquierda</b> para avanzar.</p>
+  <p>Sujeta el móvil con una mano: mueve el móvil para mirar y usa el <b>joystick de la izquierda</b> con el pulgar para moverte.</p>
   <p>Pon la otra mano <b>detrás del móvil</b>, a unos 20–40&nbsp;cm de la cámara trasera. Verás tu mano en el juego: ponla sobre un objeto y haz su gesto.</p>
   <div class="lista" id="listaGestos1"></div>
   <button class="btn grande" id="btnEmpezar">Empezar</button>

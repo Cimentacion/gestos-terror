@@ -68,6 +68,7 @@ export class Mano3D {
     this.palmaLocal = new THREE.Vector3(0, -0.15, -0.4);
     this.normalPalma = new THREE.Vector3(0, 0, 1);
     this.grupo.visible = false;
+    this.tocando = false;
     this._v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   }
 
@@ -76,7 +77,8 @@ export class Mano3D {
   }
 
   // lm: 21 puntos de MediaPipe o null. aspectoVideo = ancho/alto del vídeo.
-  actualizar(lm, aspectoVideo, dt) {
+  // limite: distancia desde la cámara a la primera superficie en la dirección de la palma
+  actualizar(lm, aspectoVideo, dt, limite = Infinity) {
     const cam = this.camera;
     if (lm && aspectoVideo > 0) {
       const aP = cam.aspect;
@@ -100,6 +102,17 @@ export class Mano3D {
         const yn = -(p.y - 0.5) * 2 * gy;
         const di = Math.max(0.12, this.dist + (p.z || 0) * aspectoVideo * gy * altoVisible * CFG_MANO.escalaZ);
         this.objetivos[i].set(xn * tanX * di, yn * tanY * di, -di);
+      }
+      // Si hay una superficie delante, la mano se queda apoyada en ella (no la atraviesa).
+      // Se acerca toda la mano hacia la cámara: en pantalla sigue en el mismo sitio.
+      const c = this._v[2].set(0, 0, 0);
+      for (const id of PALMA_IDS) c.add(this.objetivos[id]);
+      const dPalma = c.divideScalar(PALMA_IDS.length).length();
+      const margen = 0.035;
+      this.tocando = limite < dPalma + margen;
+      if (this.tocando) {
+        const f = Math.max(0.3, (limite - margen) / dPalma);
+        for (let i = 0; i < 21; i++) this.objetivos[i].multiplyScalar(f);
       }
       if (!this.hayDatos) {
         for (let i = 0; i < 21; i++) this.puntos[i].copy(this.objetivos[i]);
