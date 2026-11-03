@@ -1,6 +1,7 @@
 import * as THREE from './lib/three/three.module.js';
 import { FilesetResolver, HandLandmarker } from './lib/mediapipe/vision_bundle.js';
 import { Reconocedor, GESTOS } from './gestos.js';
+import { Mano3D } from './mano3d.js';
 
 const $ = id => document.getElementById(id);
 
@@ -95,6 +96,10 @@ scene.add(luzAlarma);
 const luzLuna = new THREE.PointLight(0x6080ff, 3, 6, 2);
 luzLuna.position.set(0, 1.7, 3.6);
 scene.add(luzLuna);
+
+// Mano virtual superpuesta
+const mano3d = new Mano3D(camera);
+let ultimaMano = null, aspectoVideo = 4 / 3;
 
 // Habitación 6 x 3 x 6
 const AN = 6, AL = 3;
@@ -309,7 +314,7 @@ objetos.push({
       cofre.rotation.set(0.2, -0.3, 0);
     });
   },
-  reset() { this.hecho = false; scene.add(cofre); cofre.position.copy(COFRE_MESA); cofre.rotation.set(0, 0, 0); },
+  reset() { this.hecho = false; scene.add(cofre); cofre.position.copy(COFRE_MESA); cofre.rotation.set(0, 0, 0); cofre.scale.setScalar(1); },
 });
 
 // ---------------------------------------------------------------- OBJETO 5: ventana (romper)
@@ -562,6 +567,8 @@ function bucle() {
     const res = detector.detectForVideo(video, t);
     const lm = (res.landmarks && res.landmarks[0]) || null;
     const aspecto = video.videoWidth / (video.videoHeight || 1);
+    ultimaMano = lm;
+    aspectoVideo = aspecto;
     if (lienzo.width / lienzo.height !== aspecto && aspecto > 0) {
       lienzo.height = Math.round(lienzo.width / aspecto);
       lienzo.style.height = lienzo.height + 'px';
@@ -569,6 +576,24 @@ function bucle() {
     const r = reco.actualizar(lm, t, aspecto);
     dibujarMano(lm, r.pose, r.debug);
     if (r.gesto) alGesto(r.gesto);
+  }
+
+  // mano virtual en su sitio
+  mano3d.actualizar(jugando ? ultimaMano : null, aspectoVideo, dt);
+  // la caja cogida se queda en la palma
+  if (cofre.parent === camera) {
+    const objetivoCaja = new THREE.Vector3();
+    let escalaCaja = 0.45;
+    if (mano3d.visible) {
+      objetivoCaja.copy(mano3d.palmaLocal);
+      objetivoCaja.y -= 0.02 * mano3d.escalaMano;
+      escalaCaja = 0.45 * mano3d.escalaMano;
+    } else {
+      objetivoCaja.set(0.22, -0.28, -0.55);
+    }
+    cofre.position.lerp(objetivoCaja, 1 - Math.pow(0.6, dt * 60));
+    const e = cofre.scale.x + (escalaCaja - cofre.scale.x) * 0.2;
+    cofre.scale.setScalar(e);
   }
 
   // animaciones
