@@ -1,0 +1,67 @@
+name: Compilar APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Preparar librerías y modelo de manos
+        run: npm run preparar
+
+      - name: Crear proyecto Android
+        run: npx cap add android
+
+      - name: Permisos (cámara trasera obligatoria, vibración) y vertical
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.VIBRATE" />\n    <uses-feature android:name="android.hardware.camera" android:required="true" />\n</manifest>#' $M
+          sed -i 's#android:name=".MainActivity"#android:name=".MainActivity" android:screenOrientation="portrait"#' $M
+          cat $M
+
+      - name: Sincronizar web con Android
+        run: npx cap sync android
+
+      - name: Compilar
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Renombrar APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk gestos-terror.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gestos-terror-apk
+          path: gestos-terror.apk
+
+      - name: Publicar en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: prototipo-gestos
+          name: Prototipo gestos (último)
+          files: gestos-terror.apk
+          make_latest: true

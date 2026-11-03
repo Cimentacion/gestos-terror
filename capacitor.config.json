@@ -1,0 +1,8 @@
+{
+  "appId": "com.gestos.terror",
+  "appName": "Gestos Terror",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#000000"
+  }
+}
