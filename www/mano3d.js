@@ -69,6 +69,8 @@ export class Mano3D {
     this.normalPalma = new THREE.Vector3(0, 0, 1);
     this.grupo.visible = false;
     this.tocando = false;
+    this.ancla = new THREE.Vector3();
+    this.pesoAncla = 0;
     this._v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   }
 
@@ -78,8 +80,11 @@ export class Mano3D {
 
   // lm: 21 puntos de MediaPipe o null. aspectoVideo = ancho/alto del vídeo.
   // limite: distancia desde la cámara a la primera superficie en la dirección de la palma
-  actualizar(lm, aspectoVideo, dt, limite = Infinity) {
+  // ancla: punto (en coordenadas de la cámara) al que se pega la palma mientras sujetas algo, o null
+  actualizar(lm, aspectoVideo, dt, limite = Infinity, ancla = null) {
     const cam = this.camera;
+    this.pesoAncla += ((ancla ? 1 : 0) - this.pesoAncla) * Math.min(1, dt * 10);
+    if (ancla) this.ancla.copy(ancla);
     if (lm && aspectoVideo > 0) {
       const aP = cam.aspect;
       const tanY = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
@@ -107,9 +112,16 @@ export class Mano3D {
       // Se acerca toda la mano hacia la cámara: en pantalla sigue en el mismo sitio.
       const c = this._v[2].set(0, 0, 0);
       for (const id of PALMA_IDS) c.add(this.objetivos[id]);
-      const dPalma = c.divideScalar(PALMA_IDS.length).length();
+      c.divideScalar(PALMA_IDS.length);
+      // Sujetando algo: la palma se va al asa del objeto y se mueve con él
+      if (this.pesoAncla > 0.01) {
+        const off = this._v[3].subVectors(this.ancla, c).multiplyScalar(this.pesoAncla);
+        for (let i = 0; i < 21; i++) this.objetivos[i].add(off);
+        c.add(off);
+      }
+      const dPalma = c.length();
       const margen = 0.035;
-      this.tocando = limite < dPalma + margen;
+      this.tocando = this.pesoAncla < 0.5 && limite < dPalma + margen;
       if (this.tocando) {
         const f = Math.max(0.3, (limite - margen) / dPalma);
         for (let i = 0; i < 21; i++) this.objetivos[i].multiplyScalar(f);

@@ -15,26 +15,34 @@
   #mira { position:fixed; left:50%; top:50%; width:8px; height:8px; margin:-4px 0 0 -4px; border:1px solid rgba(255,255,255,.35); border-radius:50%; pointer-events:none; }
   #mira.oculta { display:none; }
 
-  #panelMano { position:fixed; left:calc(10px + env(safe-area-inset-left)); top:calc(10px + env(safe-area-inset-top)); background:var(--panel); border:1px solid #333; border-radius:8px; padding:6px; width:132px; font-size:11px; pointer-events:none; }
-  #lienzoMano { width:120px; height:90px; display:block; background:#050506; border-radius:4px; }
+  #panelMano { position:fixed; left:calc(10px + env(safe-area-inset-left)); top:calc(10px + env(safe-area-inset-top)); background:var(--panel); border:1px solid #333; border-radius:8px; padding:6px; width:150px; font-size:11px; pointer-events:none; z-index:3; }
+  #lienzoMano { width:138px; height:104px; display:block; background:#050506; border-radius:4px; }
   #poseTxt { margin-top:4px; font-weight:600; }
   #debugTxt { color:var(--dim); font-size:10px; }
-  #gestoTxt { margin-top:3px; min-height:14px; font-weight:700; color:#ffd36a; }
 
-  #tiempo { position:fixed; left:50%; top:calc(12px + env(safe-area-inset-top)); transform:translateX(-50%); font:600 15px ui-monospace,monospace; color:#cfc8ba; text-shadow:0 1px 3px #000; pointer-events:none; letter-spacing:1px; }
+  #arriba { position:fixed; left:0; right:0; top:calc(10px + env(safe-area-inset-top)); display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none; }
+  #tiempo { font:600 15px ui-monospace,monospace; color:#cfc8ba; text-shadow:0 1px 3px #000; letter-spacing:1px; }
+  #inventario { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width:60%; }
+  .item { background:rgba(60,45,20,.8); border:1px solid #a0803a; color:#f0dca0; border-radius:12px; padding:3px 9px; font-size:12px; font-weight:600; }
 
-  #botones { position:fixed; right:calc(10px + env(safe-area-inset-right)); top:calc(10px + env(safe-area-inset-top)); display:flex; flex-direction:column; gap:6px; }
+  #botones { position:fixed; right:calc(10px + env(safe-area-inset-right)); top:calc(10px + env(safe-area-inset-top)); display:flex; flex-direction:column; gap:6px; z-index:3; }
   .btn { background:var(--panel); color:var(--txt); border:1px solid #444; border-radius:8px; padding:8px 10px; font-size:13px; }
   .btn:active { background:#333; }
 
-  #joyBase { position:fixed; left:calc(20px + env(safe-area-inset-left)); bottom:calc(80px + env(safe-area-inset-bottom)); width:128px; height:128px; border-radius:50%; background:rgba(20,20,24,.45); border:2px solid rgba(255,255,255,.2); touch-action:none; }
+  #joyBase { position:fixed; left:calc(20px + env(safe-area-inset-left)); bottom:calc(70px + env(safe-area-inset-bottom)); width:136px; height:136px; border-radius:50%; background:rgba(20,20,24,.45); border:2px solid rgba(255,255,255,.2); touch-action:none; z-index:2; }
   #joyBase.pulsado { border-color:rgba(255,255,255,.45); background:rgba(30,30,36,.55); }
-  #joyBola { position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:rgba(230,225,215,.35); border:2px solid rgba(255,255,255,.5); pointer-events:none; }
+  #joyBola { position:absolute; left:50%; top:50%; width:56px; height:56px; margin:-28px 0 0 -28px; border-radius:50%; background:rgba(230,225,215,.35); border:2px solid rgba(255,255,255,.5); pointer-events:none; }
   #joyBase.pulsado #joyBola { background:rgba(230,225,215,.55); }
-  #abajo { position:fixed; left:0; right:0; bottom:calc(20px + env(safe-area-inset-bottom)); text-align:center; pointer-events:none; padding:0 12px 0 156px; }
-  #objetivoTxt { display:inline-block; background:var(--panel); padding:6px 12px; border-radius:6px; font-size:14px; }
-  #objetivoTxt:empty { display:none; }
-  #mensajeTxt { margin-top:8px; font-size:16px; font-weight:700; text-shadow:0 2px 4px #000; min-height:22px; transition:opacity .4s; }
+  .flecha { position:absolute; color:rgba(255,255,255,.35); font-size:12px; pointer-events:none; }
+
+  #abajo { position:fixed; left:0; right:0; bottom:calc(16px + env(safe-area-inset-bottom)); text-align:center; pointer-events:none; padding:0 12px 0 166px; }
+  #objetivo { display:inline-block; background:var(--panel); padding:7px 12px; border-radius:8px; font-size:14px; max-width:100%; }
+  #objetivo.oculto { display:none; }
+  #objNombre { font-weight:700; }
+  #objPista { color:#ffd36a; font-size:12px; margin-top:2px; }
+  #barra { height:5px; background:#222; border-radius:3px; margin-top:5px; overflow:hidden; }
+  #barraRelleno { height:100%; width:0; background:#7fd67f; }
+  #mensajeTxt { margin-top:8px; font-size:15px; font-weight:700; text-shadow:0 2px 4px #000; min-height:20px; transition:opacity .4s; }
   .ok { color:var(--ok); } .mal { color:var(--mal); }
 
   .pantalla { position:fixed; inset:0; background:rgba(0,0,0,.93); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; z-index:10; overflow:auto; }
@@ -47,6 +55,7 @@
   .oculto { display:none !important; }
   #cargaTxt { color:var(--dim); margin-top:10px; font-size:13px; }
   #fundido { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity .15s; z-index:5; }
+  #fundido.rojo { background:#6a0000; }
 </style>
 </head>
 <body>
@@ -54,45 +63,57 @@
 <video id="video" playsinline muted autoplay></video>
 
 <div id="mira"></div>
-<div id="tiempo">00:00</div>
+<div id="arriba">
+  <div id="tiempo">00:00</div>
+  <div id="inventario"></div>
+</div>
 
 <div id="panelMano" class="oculto">
-  <canvas id="lienzoMano" width="120" height="90"></canvas>
+  <canvas id="lienzoMano" width="138" height="104"></canvas>
   <div id="poseTxt">Sin mano</div>
   <div id="debugTxt"></div>
-  <div id="gestoTxt"></div>
 </div>
 
 <div id="botones">
   <button class="btn" id="btnFlash">Flash: ?</button>
-  <button class="btn" id="btnAyuda">Gestos</button>
+  <button class="btn" id="btnAyuda">Ayuda</button>
   <button class="btn" id="btnDebug">Debug</button>
   <button class="btn" id="btnReset">Reiniciar</button>
 </div>
 
-<div id="joyBase"><div id="joyBola"></div></div>
+<div id="joyBase">
+  <span class="flecha" style="left:50%;top:6px;transform:translateX(-50%)">▲</span>
+  <span class="flecha" style="left:50%;bottom:6px;transform:translateX(-50%)">▼</span>
+  <span class="flecha" style="left:7px;top:50%;transform:translateY(-50%)">⟲</span>
+  <span class="flecha" style="right:7px;top:50%;transform:translateY(-50%)">⟳</span>
+  <div id="joyBola"></div>
+</div>
 
 <div id="abajo">
-  <div id="objetivoTxt"></div>
+  <div id="objetivo" class="oculto">
+    <div id="objNombre"></div>
+    <div id="objPista"></div>
+    <div id="barra"><div id="barraRelleno"></div></div>
+  </div>
   <div id="mensajeTxt"></div>
 </div>
 
 <div id="fundido"></div>
 
 <div class="pantalla" id="pantallaInicio">
-  <h1>LA HABITACIÓN</h1>
+  <h1>LA CASA</h1>
   <p>Estás encerrado. Sal de aquí.</p>
-  <p>Sujeta el móvil con una mano: mueve el móvil para mirar y usa el <b>joystick de la izquierda</b> con el pulgar para moverte.</p>
-  <p>Pon la otra mano <b>detrás del móvil</b>, a unos 20–40&nbsp;cm de la cámara trasera. Verás tu mano en el juego: ponla sobre un objeto y haz su gesto.</p>
+  <p>Sujeta el móvil con una mano. Con el pulgar usa el <b>joystick</b>: arriba/abajo para andar, a los lados para girar.</p>
+  <p>Pon la otra mano <b>detrás del móvil</b>, a unos 20–40&nbsp;cm de la cámara trasera. Verás tu mano en el juego. Acércala a un objeto marcado con un círculo: abajo te dice qué hacer.</p>
   <div class="lista" id="listaGestos1"></div>
   <button class="btn grande" id="btnEmpezar">Empezar</button>
   <div id="cargaTxt"></div>
 </div>
 
 <div class="pantalla oculto" id="pantallaAyuda">
-  <h1>GESTOS</h1>
+  <h1>CÓMO SE JUEGA</h1>
   <div class="lista" id="listaGestos2"></div>
-  <p>Tienes que estar cerca del objeto y con tu mano encima de él.</p>
+  <p>Los objetos con los que puedes hacer algo tienen un círculo. El que tienes seleccionado brilla y abajo sale su nombre y qué hacer.</p>
   <button class="btn grande" id="btnCerrarAyuda">Volver</button>
 </div>
 
@@ -101,7 +122,7 @@
   <p id="errorTxt"></p>
   <p>Activa el permiso de cámara para esta app en Ajustes del móvil y vuelve a abrirla.</p>
   <button class="btn grande" id="btnReintentar">Reintentar</button>
-  <button class="btn" id="btnSinCamara" style="margin-top:12px">Probar sin cámara (teclas 1–5, W para andar)</button>
+  <button class="btn" id="btnSinCamara" style="margin-top:12px">Probar sin cámara (W/S andar, A/D girar, E usar)</button>
 </div>
 
 <div class="pantalla oculto" id="pantallaFin">

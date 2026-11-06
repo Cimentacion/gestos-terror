@@ -30,37 +30,37 @@ Después hace `assembleDebug` y publica el APK en Releases. Tarda unos 2 minutos
 No se usa `android-actions/setup-android`, porque el runner ya trae el SDK y ese paso fallaba.
 
 ## Controles actuales
-- Mirar: giroscopio (`deviceorientation`), suavizado con slerp. Arrastrar el dedo añade giro horizontal.
-- Moverse: joystick analógico abajo a la izquierda, con zona muerta del 15 %, inercia y deslizamiento por las paredes.
-- Interactuar: la palma de la mano 3D se proyecta a pantalla y se lanza un raycast (alcance de 2 m) contra las zonas de los objetos. Si en ese momento no hay objetivo, el gesto vale para el objeto que había debajo en los últimos 900 ms.
-- Tacto: un rayo desde la cámara hacia la palma contra `solidos` (todo lo creado con `caja()`/`plano()`). Si hay superficie, la mano se acerca a la cámara y queda apoyada. Al contactar hay vibración y golpe, y al arrastrar, roce.
+- Cámara a altura fija (1,6 m) con una inclinación fija hacia abajo (`INCLINACION`). **Sin giroscopio.**
+- Joystick tipo tanque abajo a la izquierda: arriba/abajo para andar, a los lados para girar (se juega con un pulgar). Arrastrar en pantalla también gira.
+- En los pasos estrechos abiertos el jugador se centra solo.
+- Objetivo permisivo (`elegirObjetivo`): cualquier objeto a menos de `ALCANCE` (2,1 m) cerca de la palma en pantalla (`RADIO_SEL` 0,9), que no esté tapado por `muros`. Si tienes el objeto que hace falta, tiene prioridad lo que puedes usar.
+- Cada objeto lleva una marca (sprite): tenue si está disponible y brillante si está seleccionado. Abajo se muestran el nombre, qué hacer y una barra de progreso.
+- Tacto: la mano no atraviesa `solidos`; vibra al tocar y suena roce al arrastrar.
 
-## Gestos (gestos.js)
-| Gesto | Cómo se detecta |
+## Interacción (gestos.js + pasoInteraccion en juego.js)
+`gestos.js` solo dice si la mano está **cerrada** (puño, pinza o dos dedos doblados), su posición, giro y tamaño, y detecta el golpe **romper**.
+El juego decide qué pasa según el tipo del objeto seleccionado:
+| tipo | qué hacer |
 |---|---|
-| cuerda | pinza (pulgar con índice) + bajar la mano |
-| palanca | puño + bajar la mano |
-| romper | puño + desplazamiento o cambio de escala rápido en 230 ms |
-| agarrar | mano abierta → puño y quieto 350 ms |
-| llave | pinza o puño + giro de muñeca >55° sin desplazar la mano |
-
-Cada objeto solo acepta su gesto. Con el gesto equivocado sale "✗ no sirve con…", con sonido de error y vibración.
+| bajar | cerrar la mano y bajarla. El objeto sigue la mano en continuo (palanca, cuerda con muelle) |
+| girar | cerrar la mano y girar la muñeca. Se acumula si sueltas y vuelves a coger (llaves, válvula) |
+| tirar | cerrar la mano y acercarla (la mano crece) o bajarla (cajón) |
+| coger | cerrar la mano encima |
+| romper | golpe rápido con la mano cerrada |
+| colocar | usa un objeto del inventario solo con dejar la mano encima 0,45 s |
+Mientras sujetas algo, la mano 3D se pega al asa (`ancla` en mano3d.js). Romper sobre algo que no se rompe da "✗ eso no se rompe".
 
 ## Escape room (orden)
-1. Cuerda → luz (se leen las notas de las paredes).
-2. Vitrina (mesa, pared oeste) → romper.
-3. Caja dentro de la vitrina → agarrar. Se abre en la mano y da la llave.
-4. Cerradura con la corriente puesta → calambre, error.
-5. Palanca del cuadro eléctrico (pared este) → corta la corriente y el piloto pasa a verde.
-6. Cerradura con la llave → la puerta se abre. Susto en el pasillo, y la SALIDA da el tiempo final.
+Dormitorio: cuerda (luz) → romper vitrina → coger caja (da la llave pequeña) → meter y girar la llave del cajón → tirar del cajón → coger el fusible → ponerlo en el cuadro → bajar la palanca (sin fusible no pasa nada) → se abre la persiana.
+Sala de calderas: girar la válvula (el vapor bloquea el paso y quema) → romper el candado del baúl → coger la llave grande → romper 3 tablas de la puerta → meter y girar la llave grande → pasillo con susto → SALIDA y tiempo.
 
 ## Probar sin móvil
 Servir `www/` (después de `npm install && npm run preparar`) y pulsar "Probar sin cámara".
-Teclas 1–5 = gestos, W = andar, flechas = mirar.
+W/S = andar, A/D = girar, E = hacer la acción del objeto seleccionado.
 `window.__debug.setMano(landmarks)` inyecta una mano falsa para pruebas.
 
 ## Pendiente / ideas
-- Afinar umbrales de gestos y de la mano (`CFG`, `CFG_MANO`) con pruebas en móvil real.
+- Afinar con pruebas en móvil real `CFG` (gestos), `CFG_MANO`, `RADIO_SEL`, `ALCANCE`, `INCLINACION` y el `recorrido`/`total` de cada objeto.
 - Confirmar cómo se nota la vibración del tacto.
 - Más habitaciones y puzzles, enemigos, sonido ambiente.
 
